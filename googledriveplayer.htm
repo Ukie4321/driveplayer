@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Playlist Player - Google Drive</title>
+<title>Video Playlist Embed Player</title>
 <style>
 body { font-family: Arial, sans-serif; background:#111; color:#fff; margin:0; padding:20px; text-align:center; }
 .container { max-width: 900px; margin:auto; }
@@ -11,7 +11,7 @@ input, button { padding:10px; margin:5px; border-radius:5px; border:none; }
 input { width:60%; }
 button { background:#0a84ff; color:#fff; cursor:pointer; }
 button:hover { background:#0066cc; }
-video { width:100%; max-height:500px; margin-top:20px; border-radius:10px; background:#000;}
+iframe { width:100%; height:500px; margin-top:20px; border:none; border-radius:10px; background:#000; }
 .video-list { margin-top:20px; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
 .video-item { position:relative; width:200px; }
 .video-item button { width:100%; margin:0; }
@@ -24,15 +24,15 @@ video { width:100%; max-height:500px; margin-top:20px; border-radius:10px; backg
 </head>
 <body>
 <div class="container">
-<h2>Video Playlist Player (Google Drive + MP4)</h2>
-<p>Masukkan link Google Drive atau MP4 dan judul custom:</p>
-<input type="text" id="videoLink" placeholder="Paste link MP4 / Google Drive di sini">
+<h2>Video Playlist Embed Player (Google Drive)</h2>
+<p>Masukkan link Google Drive dan judul custom:</p>
+<input type="text" id="videoLink" placeholder="Paste link Google Drive di sini">
 <input type="text" id="videoTitle" placeholder="Judul video (opsional)">
 <button onclick="addVideo()">Tambah Video</button>
 
 <div class="output" id="result"></div>
 
-<video id="player" controls autoplay></video>
+<iframe id="player" allow="autoplay" allowfullscreen></iframe>
 
 <div class="control-buttons">
 <button onclick="prevVideo()">Previous</button>
@@ -46,11 +46,11 @@ video { width:100%; max-height:500px; margin-top:20px; border-radius:10px; backg
 let videoList = [];
 let currentIndex = 0;
 
-// Konversi Google Drive link ke direct download link
+// Convert Google Drive link to embed URL
 function convertDriveLink(url){
   const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if(match) return `https://drive.google.com/uc?export=download&id=${match[1]}`;
-  return url; // Jika bukan Drive, return original link
+  if(match) return `https://drive.google.com/file/d/${match[1]}/preview`;
+  return url; // jika bukan Drive, tetap return url
 }
 
 // Tambah video baru
@@ -59,7 +59,7 @@ function addVideo(){
   if(!link) return;
   link = convertDriveLink(link);
   const title = document.getElementById("videoTitle").value.trim() || `Video ${videoList.length+1}`;
-  
+
   videoList.push({link, title});
   renderVideoList();
   playVideo(videoList.length-1);
@@ -83,11 +83,10 @@ function renderVideoList(){
     const item = document.createElement("div");
     item.className = "video-item";
 
-    const thumb = document.createElement("video");
-    thumb.src = v.link;
-    thumb.muted = true;
-    thumb.preload = "metadata";
+    // Thumbnail placeholder
+    const thumb = document.createElement("div");
     thumb.className = "thumbnail";
+    thumb.textContent = v.title;
 
     const btn = document.createElement("button");
     btn.textContent = v.title;
@@ -115,10 +114,7 @@ function renderVideoList(){
 function playVideo(idx){
   if(videoList.length===0) return;
   currentIndex = idx;
-  const player = document.getElementById("player");
-  player.src = videoList[idx].link;
-  player.load();
-  player.play();
+  document.getElementById("player").src = videoList[idx].link;
 }
 
 // Next / Previous
@@ -134,11 +130,6 @@ function prevVideo(){
   playVideo(currentIndex);
 }
 
-// Autoplay next video
-document.getElementById("player").addEventListener("ended",()=>{
-  nextVideo();
-});
-
 // Auto-load dari parameter ?video=
 window.onload = function(){
   const params = new URLSearchParams(window.location.search);
@@ -146,8 +137,8 @@ window.onload = function(){
   if(encoded){
     try{
       const url = atob(encoded);
-      const driveLink = convertDriveLink(url);
-      videoList.push({link: driveLink, title:"Video 1"});
+      const embedLink = convertDriveLink(url);
+      videoList.push({link: embedLink, title:"Video 1"});
       renderVideoList();
       playVideo(0);
     } catch(e){
