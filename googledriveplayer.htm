@@ -3,67 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Playlist Embed Player</title>
+<title>Video Player All-in-One</title>
 <style>
-body { font-family: Arial, sans-serif; background:#111; color:#fff; margin:0; padding:20px; text-align:center; }
-.container { max-width: 900px; margin:auto; }
-input, button { padding:10px; margin:5px; border-radius:5px; border:none; }
-input { width:60%; }
-button { background:#0a84ff; color:#fff; cursor:pointer; }
-button:hover { background:#0066cc; }
-iframe { width:100%; height:500px; margin-top:20px; border:none; border-radius:10px; background:#000; }
-.video-list { margin-top:20px; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
-.video-item { position:relative; width:200px; }
-.video-item button { width:100%; margin:0; }
-.video-item .delete-btn { position:absolute; top:0; right:0; background:red; color:#fff; border-radius:0 0 0 5px; padding:2px 5px; font-size:12px; cursor:pointer; }
-.thumbnail { width:100%; height:110px; object-fit:cover; border-radius:5px; background:#000; }
-.control-buttons { margin-top:10px; }
-.control-buttons button { width:100px; }
-.output { margin-top:15px; }
+  body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; margin:0; padding:20px;}
+  .container { max-width: 800px; margin:auto; }
+  input, button { padding:10px; margin:5px; border-radius:5px; border:none; }
+  input { width:70%; }
+  button { background:#0a84ff; color:#fff; cursor:pointer; }
+  button:hover { background:#0066cc; }
+  video { width:100%; max-height:500px; margin-top:20px; border-radius:10px; background:#000;}
+  .output { margin-top:15px; }
 </style>
 </head>
 <body>
 <div class="container">
-<h2>Video Playlist Embed Player (Google Drive)</h2>
-<p>Masukkan link Google Drive dan judul custom:</p>
-<input type="text" id="videoLink" placeholder="Paste link Google Drive di sini">
-<input type="text" id="videoTitle" placeholder="Judul video (opsional)">
-<button onclick="addVideo()">Tambah Video</button>
+  <h2>Video Player All-in-One</h2>
+  <p>Masukkan link video MP4:</p>
+  <input type="text" id="videoLink" placeholder="Paste link MP4 di sini">
+  <button onclick="generateVideo()">Tonton</button>
 
-<div class="output" id="result"></div>
-
-<iframe id="player" allow="autoplay" allowfullscreen></iframe>
-
-<div class="control-buttons">
-<button onclick="prevVideo()">Previous</button>
-<button onclick="nextVideo()">Next</button>
-</div>
-
-<div class="video-list" id="videoList"></div>
+  <div class="output" id="result"></div>
+  <video id="player" controls></video>
 </div>
 
 <script>
-let videoList = [];
-let currentIndex = 0;
-
-// Convert Google Drive link to embed URL
-function convertDriveLink(url){
-  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if(match) return `https://drive.google.com/file/d/${match[1]}/preview`;
-  return url; // jika bukan Drive, tetap return url
-}
-
-// Tambah video baru
-function addVideo(){
-  let link = document.getElementById("videoLink").value.trim();
+function generateVideo(){
+  const link = document.getElementById("videoLink").value.trim();
   if(!link) return;
-  link = convertDriveLink(link);
-  const title = document.getElementById("videoTitle").value.trim() || `Video ${videoList.length+1}`;
-
-  videoList.push({link, title});
-  renderVideoList();
-  playVideo(videoList.length-1);
-
+  
+  // Encode Base64 untuk share link (opsional)
   const encoded = btoa(link);
   const finalUrl = window.location.origin + window.location.pathname + "?video=" + encoded;
   document.getElementById("result").innerHTML = `
@@ -71,76 +39,24 @@ function addVideo(){
     <input type="text" value="${finalUrl}" readonly onclick="this.select()">
   `;
 
-  document.getElementById("videoLink").value = "";
-  document.getElementById("videoTitle").value = "";
+  // Tampilkan video
+  const player = document.getElementById("player");
+  player.src = link;
+  player.load();
+  player.play();
 }
 
-// Render daftar video
-function renderVideoList(){
-  const listDiv = document.getElementById("videoList");
-  listDiv.innerHTML = "";
-  videoList.forEach((v, idx) => {
-    const item = document.createElement("div");
-    item.className = "video-item";
-
-    // Thumbnail placeholder
-    const thumb = document.createElement("div");
-    thumb.className = "thumbnail";
-    thumb.textContent = v.title;
-
-    const btn = document.createElement("button");
-    btn.textContent = v.title;
-    btn.onclick = () => playVideo(idx);
-
-    const del = document.createElement("div");
-    del.className = "delete-btn";
-    del.textContent = "X";
-    del.onclick = () => {
-      videoList.splice(idx,1);
-      if(currentIndex>=videoList.length) currentIndex=videoList.length-1;
-      renderVideoList();
-      if(videoList.length>0) playVideo(currentIndex);
-      else document.getElementById("player").src = "";
-    };
-
-    item.appendChild(thumb);
-    item.appendChild(btn);
-    item.appendChild(del);
-    listDiv.appendChild(item);
-  });
-}
-
-// Play video by index
-function playVideo(idx){
-  if(videoList.length===0) return;
-  currentIndex = idx;
-  document.getElementById("player").src = videoList[idx].link;
-}
-
-// Next / Previous
-function nextVideo(){
-  if(videoList.length===0) return;
-  currentIndex = (currentIndex+1)%videoList.length;
-  playVideo(currentIndex);
-}
-
-function prevVideo(){
-  if(videoList.length===0) return;
-  currentIndex = (currentIndex-1+videoList.length)%videoList.length;
-  playVideo(currentIndex);
-}
-
-// Auto-load dari parameter ?video=
+// Jika halaman dibuka dengan ?video=BASE64
 window.onload = function(){
   const params = new URLSearchParams(window.location.search);
   const encoded = params.get("video");
   if(encoded){
     try{
       const url = atob(encoded);
-      const embedLink = convertDriveLink(url);
-      videoList.push({link: embedLink, title:"Video 1"});
-      renderVideoList();
-      playVideo(0);
+      const player = document.getElementById("player");
+      player.src = url;
+      player.load();
+      player.play();
     } catch(e){
       document.getElementById("result").innerHTML = "<p>Link video tidak valid!</p>";
     }
